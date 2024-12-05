@@ -1,0 +1,32 @@
+Unique number of words in Harry Potter Sorcerer's Stone: 6022
+Total number of words in Harry Potter Sorcerer's Stone: 77575
+Average number of times words are repeated in book: 12.881932912653603
+Count of occurrences of each letter in alphabet:
+Character: e, Value: 39915
+Character: t, Value: 29048
+Character: a, Value: 26590
+Character: o, Value: 26141
+Character: h, Value: 22531
+Character: n, Value: 21825
+Character: r, Value: 21650
+Character: i, Value: 20815
+Character: s, Value: 19714
+Character: d, Value: 16617
+Character: l, Value: 14594
+Character: u, Value: 9755
+Character: y, Value: 8619
+Character: g, Value: 8619
+Character: w, Value: 8397
+Character: m, Value: 7394
+Character: f, Value: 6857
+Character: c, Value: 6696
+Character: p, Value: 5548
+Character: b, Value: 5328
+Character: k, Value: 4009
+Character: v, Value: 2908
+Character: q, Value: 420
+Character: x, Value: 383
+Character: j, Value: 370
+Character: z, Value: 264
+Number of words with a previous word as a prefix: 55204
+Number of words with current word as prefix of previous word: 72319
