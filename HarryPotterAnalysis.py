@@ -1,10 +1,11 @@
 # importing required modules
 from pypdf import PdfReader
-
+import re
 class TrieNode:
     def __init__(self):
         self.children = {}
         self.is_end_of_word = False
+        self.word_count = 0
 
 class Trie:
     def __init__(self):
@@ -17,7 +18,7 @@ class Trie:
                 current.children[char] = TrieNode()
             current = current.children[char]
         current.is_end_of_word = True
-
+        current.word_count += 1
     # Search for a word in the trie
     def search(self, word):
         current = self.root
@@ -59,6 +60,7 @@ letter_count = {}
 total_words = 0
 total_prefix = 0
 total_is_prefix = 0
+word_count2 = {}
 for i in range(1, len(reader.pages)):
     #Getting specific page from pdf file
     page = reader.pages[i]
@@ -87,6 +89,10 @@ for i in range(1, len(reader.pages)):
                 total_prefix +=1
                 break
         wordTrie.insert(w)
+        if w not in word_count2:
+            word_count2[w] = 1
+        else:
+            word_count2[w] = word_count2[w] + 1
     total_words += len(words)
 #Data analysis
 #Count all unique words in wordTrie
@@ -98,6 +104,18 @@ def count_unique(node):
     for c in node.children.keys():
         end_word += count_unique(node.children[c])
     return end_word
+
+def populate_word_count(node, dict1, current=''):
+    for c in node.children.keys():
+        current1 = current + c
+        if node.is_end_of_word:
+            dict1[current1] = node.word_count
+        populate_word_count(node.children[c], dict1, current1)
+
+word_count = {}
+
+populate_word_count(wordTrie.root, word_count)
+
 with open('text_analysis.txt', 'w') as file:
     file.write('Unique number of words in Harry Potter Sorcerer\'s Stone: '+ str(wordTrie.count_words())+ '\n')
     file.write('Total number of words in Harry Potter Sorcerer\'s Stone: ' + str(total_words)+ '\n')
@@ -108,7 +126,13 @@ with open('text_analysis.txt', 'w') as file:
         file.write(f"Character: {char}, Value: {value}"+ '\n')
     file.write('Number of words with a previous word as a prefix: ' + str(total_prefix)+ '\n')
     file.write('Number of words with current word as prefix of previous word: ' + str(total_is_prefix) + '\n')
+    file.write('Word Count in descending order of occurrences:' + ' \n')
 
+
+    #Attempted finding word occurrences with Trie and failed.
+    #Found word occurrences with Dictionary.
+    for word, value in sorted(word_count2.items(), key=lambda item: item[1], reverse=True)[:15]:
+        file.write(f"Word: {word}, Count: {value}"+ '\n')
 # getting a specific page from the pdf file
 #page = reader.pages[1]
 

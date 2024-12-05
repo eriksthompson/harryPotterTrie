@@ -30,3 +30,19 @@ Character: j, Value: 370
 Character: z, Value: 264
 Number of words with a previous word as a prefix: 55204
 Number of words with current word as prefix of previous word: 72319
+Word Count in descending order of occurrences: 
+Word: the, Count: 3628
+Word: and, Count: 1919
+Word: to, Count: 1856
+Word: a, Count: 1688
+Word: he, Count: 1528
+Word: of, Count: 1259
+Word: harry, Count: 1214
+Word: was, Count: 1186
+Word: it, Count: 1026
+Word: in, Count: 965
+Word: his, Count: 937
+Word: you, Count: 863
+Word: said, Count: 794
+Word: had, Count: 702
+Word: i, Count: 652
