@@ -1,6 +1,7 @@
-#Dependencies: pypdf, transformers, sentencepiece, torch, tensorflow,and flax from pip
+#Dependencies: pypdf, transformers, sentencepiece, torch, tensorflow,and flax from pip. numba and cudatoolkit from conda.
 #First time running the program in 2-book report mode it will take longer to create AI model.
 # importing required modules
+import torch
 from pypdf import PdfReader
 import re
 from transformers import T5Tokenizer, T5ForConditionalGeneration
@@ -146,6 +147,7 @@ if analysisType == '1':
     populate_word_count(wordTrie.root, word_count)
 
 
+
     with open('word_character_analysis.txt', 'w') as file:
         file.write('Unique number of words in Harry Potter Sorcerer\'s Stone: '+ str(wordTrie.count_words())+ '\n')
         file.write('Total number of words in Harry Potter Sorcerer\'s Stone: ' + str(total_words)+ '\n')
@@ -172,33 +174,63 @@ if analysisType == '1':
 #text = page.extract_text()
 #print(text)
 
+
 if analysisType == '2':
+    print('GPU Dependency- Is torch CUDA available? ' + 'Yes.' if torch.cuda.is_available() else 'No.')
+    #If no install CUDA pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
     # Load model and tokenizer
     model_name = "t5-small"
     tokenizer = T5Tokenizer.from_pretrained(model_name)
     model = T5ForConditionalGeneration.from_pretrained(model_name)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # Move the model to GPU if available
+    model = model.to(device)
 
-    with open('book_report.txt', 'w') as file:
-        
-        page = reader.pages[1]
-        text = page.extract_text()
+    book_report = []
+    for i in range(1, len(reader.pages), 100):
+
+        #page = reader.pages[1]
+        #text = page.extract_text()
+        text = []
+        for i2 in range(1,min(len(reader.pages),i+100)):
+            text.append('Summarize: '+ reader.pages[i2].extract_text())
         #paragraphs = text.split('\n\n')
         #print(paragraphs)
         #for i in range(len(paragraphs)):
         # Tokenize input
-        inputs = tokenizer.encode(text, return_tensors="pt", max_length=8192, truncation=False)
-
+        inputs = tokenizer.batch_encode_plus(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
+        inputs = {key: value.to(device) for key, value in inputs.items()}
+        
+        # Extract tensors
+        #print(inputs)
+        input_ids = inputs["input_ids"]  # Tensor of token IDs
+        attention_mask = inputs["attention_mask"]  # Tensor for attention mask
+        input_ids = input_ids.to(device)
+        attention_mask = attention_mask.to(device)
         # Generate summary
-        outputs = model.generate(inputs,max_length=8192, num_beams=10, early_stopping=False)
-
-
-        # Decode and print summary
-        summary1 = tokenizer.decode(outputs[0], skip_special_tokens=True,clean_up_tokenization_spaces=True, errors='ignore')
-        def split_into_chunks(text, chunk_size=100):
-            # Split text into smaller chunks of a specified size
-            return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
-        chunks = split_into_chunks(summary1)
-        file.write('Summary1: ' + '\n')
-        for c in chunks:
-            file.write(c + '\n')
+        outputs = model.generate(input_ids=input_ids, 
+                                    attention_mask=attention_mask,
+                                    max_length=150,  # Set a higher max_length for longer summaries
+                                min_length=50,   # Set a minimum length for the summary
+                                num_beams=1,      # Use beam search for better generation quality
+                                no_repeat_ngram_size=2,  # Avoid repeating n-grams (e.g., pairs of words)
+                                repetition_penalty=5.0   # Penalize repetition
+                                )
+        # Decode each output
+        summary1 = [tokenizer.decode(output, skip_special_tokens=True,clean_up_tokenization_spaces=True, errors='ignore') for output in outputs]
+        book_report = book_report + summary1
+    # Function to split text into smaller chunks
+    def split_into_chunks(text, chunk_size=12):
+        text = text.replace(',','')
+        words = text.split(' ')
+        text2 = ''
+        for i in range(0, len(words), chunk_size):  # Iterate by chunk_size
+            chunk = ' '.join(words[i:i+chunk_size])  # Join the words into a chunk
+            text2 += chunk + '\n'  # Add the chunk to the final text with a newline
+        return text2
+    with open('book_report.txt', 'w') as file:    
+        for i in range(len(book_report)):
+            chunks = split_into_chunks(book_report[i])  # Split summary into chunks
+            file.write(f'Page {i+1} Summary:\n')  # Write page header
+            file.write(chunks)  # Write the chunks into the file
 print('Execution complete')
