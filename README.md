@@ -1,4 +1,5 @@
-BookAnalysis.py is the main script for the project. 
+BookAnalysis.py is the main script for the project.
+book_report.txt is the summarization output of the AI model.
 pdf_to_text.py is needed for first converting the pdf books into .txt files to input into BookAnalysis.py
 
 Option 1 counts characters and words and does some basic analysis of average word repeated occurrences. 
