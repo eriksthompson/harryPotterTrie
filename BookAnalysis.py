@@ -1,11 +1,19 @@
-#Dependencies: pypdf, transformers, sentencepiece, torch, tensorflow,and flax from pip. numba and cudatoolkit from conda.
+#Dependencies: pypdf, transformers, sentencepiece, torch, tensorflow,and flax, tf-keras from pip. numba and cudatoolkit from conda.
 #First time running the program in 2-book report mode it will take longer to create AI model.
 # importing required modules
+import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+import tensorflow
 import torch
+from torch.profiler import profile, ProfilerActivity
 from pypdf import PdfReader
 import re
 from transformers import T5Tokenizer, T5ForConditionalGeneration
 import sys
+from transformers import pipeline
+from torch.profiler import profile, ProfilerActivity
+import time
+
 class TrieNode:
     def __init__(self):
         self.children = {}
@@ -52,28 +60,25 @@ class Trie:
 
         # Start DFS from the root
         return dfs(self.root)
+# Start the timer
+start_time = time.time()
 
-bookName = input('Enter file of text to analyze (Empty for Harry Potter):')
-
-
-def is_valid_pdf_filename(filename):
-    # Define a regex pattern for invalid filename characters
-    invalid_chars_pattern = r'[<>:"/\\|?*]'
+def txt_to_pages(filename):
+    with open(filename, "r", encoding="utf-8") as file:
+        # Read the entire content of the file
+        text = file.read()
+        
+        # Split the text into pages using a delimiter
+        # Assume pages are separated by two newlines (\n\n)
+        pages = text.split("\n\n")
+        
+        # Optionally strip whitespace from each page
+        pages = [page.strip() for page in pages if page.strip()]
     
-    # Check if the filename contains invalid characters or doesn't end with ".pdf"
-    if re.search(invalid_chars_pattern, filename) or not filename.lower().endswith('.pdf'):
-        return False
-    return True
-
-# creating a pdf reader object
-if bookName == '':
-    bookName = 'Sorcerer\'sStone.pdf'
-
-if not is_valid_pdf_filename(bookName):
-    print("Invalid file. File must exist and end with .pdf")
-    sys.exit()
-
-reader = PdfReader(bookName)
+    return pages
+print('First run pdf_to_text to convert a pdf book into .txt file')
+print('Then run this python file to analyze book_text.txt')
+pages = txt_to_pages('book_text.txt')
 
 # printing number of pages in pdf file
 #print(len(reader.pages))
@@ -91,10 +96,11 @@ if analysisType == '1':
     total_prefix = 0
     total_is_prefix = 0
     word_count2 = {}
-    for i in range(1, len(reader.pages)):
+    for i in range(1, len(pages)):
         #Getting specific page from pdf file
-        page = reader.pages[i]
-        text = page.extract_text()
+        page = pages[i]
+        #text = page.extract_text()
+        text = page
         text = text.lower()
         #Take out all non alpha characters
         text = ''.join([i for i in text if i.isalpha() or i == ' ' or i == '\n'])
@@ -176,52 +182,67 @@ if analysisType == '1':
 
 
 if analysisType == '2':
+    
     print('GPU Dependency- Is torch CUDA available? ' + 'Yes.' if torch.cuda.is_available() else 'No.')
+    print('GPU device count: ' + str(torch.cuda.device_count()))  # Should show the number of GPUs
+    print('GPU Device name: ' + str(torch.cuda.get_device_name(0)))  # Name of the GPU
     #If no install CUDA pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
     # Load model and tokenizer
     model_name = "t5-small"
-    tokenizer = T5Tokenizer.from_pretrained(model_name)
-    model = T5ForConditionalGeneration.from_pretrained(model_name)
+    #tokenizer = T5Tokenizer.from_pretrained(model_name, legacy=False)
+    #model = T5ForConditionalGeneration.from_pretrained(model_name)
+    # Load the summarization pipeline
+    #summarization_pipeline = pipeline("summarization", model="t5-small", device=0)  # Use GPU (device=0)
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     # Move the model to GPU if available
-    model = model.to(device)
+    #model = model.to(device)
 
     book_report = []
-    for i in range(1, len(reader.pages), 100):
-
-        #page = reader.pages[1]
-        #text = page.extract_text()
-        text = []
-        for i2 in range(1,min(len(reader.pages),i+100)):
-            text.append('Summarize: '+ reader.pages[i2].extract_text())
-        #paragraphs = text.split('\n\n')
-        #print(paragraphs)
-        #for i in range(len(paragraphs)):
-        # Tokenize input
-        inputs = tokenizer.batch_encode_plus(text, return_tensors="pt", padding=True, truncation=True, max_length=512)
-        inputs = {key: value.to(device) for key, value in inputs.items()}
-        
-        # Extract tensors
-        #print(inputs)
-        input_ids = inputs["input_ids"]  # Tensor of token IDs
-        attention_mask = inputs["attention_mask"]  # Tensor for attention mask
-        input_ids = input_ids.to(device)
-        attention_mask = attention_mask.to(device)
-        # Generate summary
-        outputs = model.generate(input_ids=input_ids, 
-                                    attention_mask=attention_mask,
-                                    max_length=150,  # Set a higher max_length for longer summaries
-                                min_length=50,   # Set a minimum length for the summary
-                                num_beams=1,      # Use beam search for better generation quality
-                                no_repeat_ngram_size=2,  # Avoid repeating n-grams (e.g., pairs of words)
-                                repetition_penalty=5.0   # Penalize repetition
-                                )
-        # Decode each output
-        summary1 = [tokenizer.decode(output, skip_special_tokens=True,clean_up_tokenization_spaces=True, errors='ignore') for output in outputs]
-        book_report = book_report + summary1
+    #for i in range(1, len(pages), 100):
+    
+    #paragraphs = text.split('\n\n')
+    #print(paragraphs)
+    #for i in range(len(paragraphs)):
+    # Tokenize input
+    #inputs = tokenizer.batch_encode_plus(text, return_tensors="pt", padding=True, truncation=True, max_length=512).to(device)
+    #inputs = {key: value.to(device) for key, value in inputs.items()}
+    # Extract tensors
+    #print(inputs)
+    #input_ids = inputs["input_ids"]  # Tensor of token IDs
+    #attention_mask = inputs["attention_mask"]  # Tensor for attention mask
+    #input_ids = input_ids.to(device)
+    #attention_mask = attention_mask.to(device)
+        # Summarize the batch of text
+    
+    summary1 = []
+    print('Creating Pipeline... ')
+    summarizer = pipeline("summarization", model=model_name, tokenizer=model_name, device=0,
+                                    max_length=150,  # Adjust max length of summaries
+                                    min_length=50,   # Set a minimum summary length
+                                    truncation=True,  # Truncate inputs if needed
+                                    num_beams = 3,
+                                    no_repeat_ngram_size=2,
+                                    repetition_penalty=5.0,
+                                    batch_size=16)
+    summary1 = summary1 + summarizer(pages)
+        #print(summary1)
+    # Generate summary
+    #outputs = model.generate(input_ids=input_ids, 
+                                #attention_mask=attention_mask,
+                                #max_length=100,  # Set a higher max_length for longer summaries
+                            #min_length=50,   # Set a minimum length for the summary
+                            #num_beams=3,      # Use beam search for better generation quality
+                            #no_repeat_ngram_size=2,  # Avoid repeating n-grams (e.g., pairs of words)
+                            #repetition_penalty=5.0   # Penalize repetition highly
+                            #)
+    # Decode each output
+    #summary1 = [tokenizer.decode(output, skip_special_tokens=True,clean_up_tokenization_spaces=True, errors='ignore') for output in outputs]
+    book_report = book_report + summary1
+    #print(i, '-', min(i+100,len(reader.pages)), 'Complete')
     # Function to split text into smaller chunks
     def split_into_chunks(text, chunk_size=12):
-        text = text.replace(',','')
+        text = text['summary_text']
         words = text.split(' ')
         text2 = ''
         for i in range(0, len(words), chunk_size):  # Iterate by chunk_size
@@ -230,7 +251,10 @@ if analysisType == '2':
         return text2
     with open('book_report.txt', 'w') as file:    
         for i in range(len(book_report)):
+            #print(book_report)
             chunks = split_into_chunks(book_report[i])  # Split summary into chunks
             file.write(f'Page {i+1} Summary:\n')  # Write page header
             file.write(chunks)  # Write the chunks into the file
-print('Execution complete')
+# Stop the timer
+end_time = time.time()
+print('Execution complete. Time elapsed: ' + str((end_time - start_time)/60) + ' minutes.')
